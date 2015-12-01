@@ -14,16 +14,18 @@ with (
     },
     'Dist::Zilla::Role::AfterBuild',
     'Dist::Zilla::Role::DumpPerinciCmdLineScript',
-    'Dist::Zilla::Role::Rinci::CheckDefinesMeta';
+    'Dist::Zilla::Role::Rinci::CheckDefinesMeta',
 );
 
 use App::rimetadb;
-use Perinci::Access;
+use Data::Clean::JSON;
 use Perinci::Sub::Normalize qw(normalize_function_metadata);
 
 has dsn      => (is => 'rw');
 has username => (is => 'rw');
 has password => (is => 'rw');
+
+my $cleanser = Data::Clean::JSON->get_cleanser;
 
 sub after_build {
     my $self = shift;
@@ -40,20 +42,23 @@ sub _add_metas {
         (username => $self->username) x !!(defined $self->username),
         (password => $self->password) x !!(defined $self->password),
         (extra => $extra)             x !!(defined $extra),
+        dist => $self->zilla->name,
     );
 
     for my $k (sort keys %$spec) {
-        if ($k =~ /\A:package/) {
+        my $is_package = $k =~ /\A:package/;
+        my $meta = $spec->{$k};
+        $meta = normalize_function_metadata($meta) if $normalize && !$is_package;
+        $meta = $cleanser->clone_and_clean($meta);
+
+        if ($is_package) {
             $self->log_debug("Adding Rinci package metadata $pkg");
             App::rimetadb::update(
                 %updargs,
                 package=>$pkg,
-                dist=>$self->zilla->name,
-                metadata=>$spec->{$k},
+                metadata=>$meta,
             );
         } elsif ($k =~ /\A\w+\z/) {
-            my $meta = $spec->{$k};
-            $meta = normalize_function_metadata($meta) if $normalize;
             $self->log_debug("Adding Rinci function metadata $pkg\::$k");
             App::rimetadb::update(
                 %updargs,
@@ -72,8 +77,6 @@ sub process_file {
     no strict 'refs';
 
     my ($self, $file) = @_;
-
-    state $pa = Perinci::Access->new;
 
     local @INC = ('lib', @INC);
 
