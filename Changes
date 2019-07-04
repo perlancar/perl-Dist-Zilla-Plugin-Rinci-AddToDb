@@ -1,3 +1,8 @@
-0.01     2015-12-01 (PERLANCAR)
+0.020   2019-07-04  Released-By: PERLANCAR; Urgency: medium
 
-         - First release.
+	- Skip non-OnDisk files for now.
+
+
+0.01    2015-12-01  Released-By: PERLANCAR
+
+        - First release.
