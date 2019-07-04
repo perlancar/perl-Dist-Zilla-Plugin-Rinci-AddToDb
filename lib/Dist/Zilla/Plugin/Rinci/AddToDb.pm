@@ -78,6 +78,13 @@ sub process_file {
 
     my ($self, $file) = @_;
 
+    my $fname = $file->name;
+
+    unless ($file->isa("Dist::Zilla::File::OnDisk")) {
+        $self->log_debug(["skipping %s: not an ondisk file, currently only ondisk files are processed", $fname]);
+        return;
+    }
+
     local @INC = ('lib', @INC);
 
     if (my ($pkg_pm, $pkg) = $file->name =~ m!^lib/((.+)\.pm)$!) {
